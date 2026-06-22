@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>页面置换算法模拟 - OS算法模拟系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #0c0c1d, #1a1a3e, #0d1b2a);
+            min-height: 100vh; color: #e0e0e0;
+        }
+        .navbar {
+            background: rgba(0,0,0,0.4); padding: 14px 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex; align-items: center; gap: 16px;
+        }
+        .navbar a { color: #64b5f6; text-decoration: none; font-size: 0.95em; }
+        .navbar a:hover { color: #90caf9; }
+        .navbar .sep { color: #546e7a; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
+        .card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px; padding: 22px; margin-bottom: 20px;
+        }
+        .card h3 { color: #64b5f6; margin-bottom: 14px; font-size: 1.1em; }
+        .btn {
+            padding: 10px 22px; border: none; border-radius: 8px;
+            cursor: pointer; font-size: 0.95em; font-weight: 600;
+            transition: all 0.2s; color: #fff;
+        }
+        .btn-primary { background: #1565c0; }
+        .btn-primary:hover { background: #1976d2; }
+        .btn-success { background: #2e7d32; }
+        .btn-success:hover { background: #388e3c; }
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+        .btn-group .btn.active { box-shadow: 0 0 0 3px rgba(255,255,255,0.4); }
+        table {
+            width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.88em;
+        }
+        table th, table td {
+            padding: 10px 12px; text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        table th { color: #90a4ae; font-weight: 600; background: rgba(0,0,0,0.2); }
+        table tr:hover { background: rgba(255,255,255,0.03); }
+        .form-group { margin-bottom: 10px; }
+        .form-group label { display: block; color: #b0bec5; font-size: 0.85em; margin-bottom: 4px; }
+        .form-group input {
+            width: 100%; padding: 8px 12px; border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(0,0,0,0.3); color: #e0e0e0; font-size: 0.9em;
+        }
+        .row { display: flex; gap: 16px; flex-wrap: wrap; }
+        .col { flex: 1; min-width: 200px; }
+        .fault-cell { background: rgba(198,40,40,0.25) !important; font-weight: 700; }
+        .memory-cell { display: inline-block; padding: 4px 10px; border-radius: 5px; margin: 1px; font-size: 0.8em; background: rgba(0,0,0,0.3); }
+        .memory-cell.current { background: #1565c0; font-weight: 700; }
+        .stats { display: flex; gap: 20px; margin-top: 12px; flex-wrap: wrap; }
+        .stat-item { background: rgba(0,0,0,0.3); padding: 12px 18px; border-radius: 10px; text-align: center; }
+        .stat-item .label { font-size: 0.8em; color: #78909c; }
+        .stat-item .value { font-size: 1.4em; color: #64b5f6; font-weight: 700; }
+        .stat-item.fault .value { color: #ef5350; }
+        .memory-block {
+            display: inline-block; width: 48px; height: 48px; line-height: 48px;
+            border-radius: 8px; text-align: center; font-weight: 700; font-size: 0.85em;
+            margin: 2px; background: #1a1a2e; border: 2px solid rgba(255,255,255,0.1); transition: all 0.3s;
+        }
+        .memory-block.fault { border-color: #ef5350; background: rgba(239,83,80,0.2); animation: shake 0.4s; }
+        .memory-block.hit { border-color: #43a047; background: rgba(67,160,71,0.2); }
+        @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="/">🏠 首页</a>
+        <span class="sep">/</span>
+        <span>模块4：页面置换算法模拟</span>
+    </div>
+    <div class="container">
+        <div class="card">
+            <h3>📄 参数设置</h3>
+            <div class="btn-group" id="algo-btns">
+                <button class="btn btn-primary active" data-algo="OPT">OPT（最优置换）</button>
+                <button class="btn btn-primary" data-algo="LRU">LRU（最近最久未使用）</button>
+                <button class="btn btn-primary" data-algo="FIFO">FIFO（先进先出）</button>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <div class="form-group"><label>页面引用序列（逗号分隔）</label>
+                        <input type="text" id="ref-string" value="1,2,3,4,1,2,5,1,2,3,4,5" style="width:100%;"></div>
+                </div>
+                <div class="col">
+                    <div class="form-group"><label>内存物理块数</label>
+                        <input type="number" id="frame-size" value="3" min="1" max="10"></div>
+                </div>
+                <div class="col" style="display:flex;align-items:flex-end;padding-bottom:10px;">
+                    <button class="btn btn-primary" onclick="runSimulation()">▶ 运行模拟</button>
+                    <button class="btn btn-success" onclick="generateRandom()" style="margin-left:8px;">🎲 随机生成</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" id="result-card" style="display:none;">
+            <h3 id="result-title">📈 模拟结果</h3>
+            <div class="stats" id="stats-bar"></div>
+            <h4 style="color:#90a4ae;margin:16px 0 8px;">内存状态变化过程</h4>
+            <div id="memory-steps" style="overflow-x:auto;"></div>
+        </div>
+    </div>
+
+    <script>
+        let selectedAlgo = 'OPT';
+
+        document.querySelectorAll('#algo-btns .btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('#algo-btns .btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedAlgo = btn.dataset.algo;
+            });
+        });
+
+        function generateRandom() {
+            const len = 12 + Math.floor(Math.random() * 8);
+            const seq = Array.from({length: len}, () => Math.floor(Math.random() * 5) + 1).join(',');
+            document.getElementById('ref-string').value = seq;
+        }
+
+        async function runSimulation() {
+            const refStr = document.getElementById('ref-string').value;
+            const frameSize = parseInt(document.getElementById('frame-size').value) || 3;
+            const refSeq = refStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+            if (refSeq.length === 0) { alert('请输入有效的页面引用序列'); return; }
+
+            try {
+                const resp = await fetch('/api/page_replacement/run', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        algorithm: selectedAlgo,
+                        reference_string: refSeq,
+                        frame_size: frameSize
+                    })
+                });
+                const data = await resp.json();
+                if (data.error) { alert(data.error); return; }
+
+                document.getElementById('result-title').textContent = `📈 ${selectedAlgo} 算法模拟结果`;
+
+                document.getElementById('stats-bar').innerHTML = `
+                    <div class="stat-item fault"><div class="label">缺页次数</div><div class="value">${data.page_faults}</div></div>
+                    <div class="stat-item"><div class="label">总访问次数</div><div class="value">${data.total_accesses}</div></div>
+                    <div class="stat-item"><div class="label">缺页率</div><div class="value">${data.fault_rate}%</div></div>`;
+
+                // 内存状态变化
+                const stepsDiv = document.getElementById('memory-steps');
+                stepsDiv.innerHTML = '<table><thead><tr><th>访问页面</th>' +
+                    Array.from({length: frameSize}, (_, i) => `<th>块${i+1}</th>`).join('') +
+                    '<th>事件</th></tr></thead><tbody>' +
+                    data.steps.map(s => {
+                        const faultClass = s.page_fault ? 'fault-cell' : '';
+                        const eventLabel = s.page_fault ? '❌ 缺页' : '✅ 命中';
+                        const cells = s.memory_state.map(p => `<span class="memory-cell${p === s.current_page ? ' current' : ''}">${p !== undefined ? p : '-'}</span>`).join('');
+                        return `<tr class="${faultClass}">
+                            <td style="font-weight:600;">${s.current_page}</td>
+                            ${s.memory_blocks.map(b => `<td>${b !== null ? b : '-'}</td>`).join('')}
+                            <td style="font-weight:600;">${eventLabel}${s.replaced !== null ? `<br><span style="color:#78909c;font-size:0.75em;">淘汰: ${s.replaced}</span>` : ''}</td>
+                        </tr>`;
+                    }).join('') +
+                    '</tbody></table>';
+
+                document.getElementById('result-card').style.display = 'block';
+                document.getElementById('result-card').scrollIntoView({behavior:'smooth'});
+            } catch (e) {
+                alert('请求失败: ' + e.message);
+            }
+        }
+    </script>
+</body>
+</html>

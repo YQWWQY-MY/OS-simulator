@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生产者-消费者同步模拟 - OS算法模拟系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #0c0c1d, #1a1a3e, #0d1b2a);
+            min-height: 100vh; color: #e0e0e0;
+        }
+        .navbar {
+            background: rgba(0,0,0,0.4); padding: 14px 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex; align-items: center; gap: 16px;
+        }
+        .navbar a { color: #64b5f6; text-decoration: none; font-size: 0.95em; }
+        .navbar a:hover { color: #90caf9; }
+        .navbar .sep { color: #546e7a; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 24px 20px; display: grid; grid-template-columns: 360px 1fr; gap: 20px; }
+        @media (max-width: 800px) { .container { grid-template-columns: 1fr; } }
+        .card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px; padding: 22px;
+        }
+        .card h3 { color: #64b5f6; margin-bottom: 14px; font-size: 1.1em; }
+        .btn {
+            padding: 10px 22px; border: none; border-radius: 8px;
+            cursor: pointer; font-size: 0.95em; font-weight: 600;
+            transition: all 0.2s; color: #fff;
+        }
+        .btn-primary { background: #1565c0; }
+        .btn-primary:hover { background: #1976d2; }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; color: #b0bec5; font-size: 0.85em; margin-bottom: 4px; }
+        .form-group input {
+            width: 100%; padding: 8px 12px; border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(0,0,0,0.3); color: #e0e0e0; font-size: 0.9em;
+        }
+        .buffer-grid {
+            display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin: 16px 0;
+        }
+        .buffer-cell {
+            width: 70px; height: 70px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 0.8em; transition: all 0.3s;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+        .buffer-cell.empty { background: #1a1a2e; color: #546e7a; }
+        .buffer-cell.full { background: #1b5e20; color: #a5d6a7; border-color: #43a047; }
+        .buffer-cell.occupied { background: #e65100; color: #ffcc80; border-color: #ff9800; animation: pulse 0.5s; }
+        @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+        .status-bar {
+            display: flex; gap: 14px; margin: 12px 0; font-size: 0.9em;
+        }
+        .status-dot {
+            display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px;
+        }
+        .status-dot.empty { background: #546e7a; }
+        .status-dot.full { background: #43a047; }
+        .event-log {
+            max-height: 400px; overflow-y: auto; font-size: 0.85em;
+            border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 10px;
+            background: rgba(0,0,0,0.2);
+        }
+        .event-log .event {
+            padding: 5px 8px; margin: 3px 0; border-radius: 4px;
+            border-left: 3px solid transparent;
+        }
+        .event.produce { border-left-color: #43a047; background: rgba(67,160,71,0.1); }
+        .event.consume { border-left-color: #ff9800; background: rgba(255,152,0,0.1); }
+        .stats { display: flex; gap: 16px; margin-top: 12px; font-size: 0.95em; }
+        .stats span { color: #64b5f6; font-weight: 700; }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="/">🏠 首页</a>
+        <span class="sep">/</span>
+        <span>模块2：生产者-消费者同步模拟</span>
+    </div>
+    <div class="container">
+        <div class="card">
+            <h3>⚙️ 参数设置</h3>
+            <div class="form-group"><label>缓冲区大小</label><input type="number" id="buffer_size" value="5" min="1" max="20"></div>
+            <div class="form-group"><label>生产者数量</label><input type="number" id="num_producers" value="2" min="1" max="10"></div>
+            <div class="form-group"><label>消费者数量</label><input type="number" id="num_consumers" value="2" min="1" max="10"></div>
+            <div class="form-group"><label>生产速度 (件/秒)</label><input type="number" id="produce_speed" value="2" min="0.5" max="10" step="0.5"></div>
+            <div class="form-group"><label>消费速度 (件/秒)</label><input type="number" id="consume_speed" value="1.5" min="0.5" max="10" step="0.5"></div>
+            <div class="form-group"><label>连续取产品个数 n</label><input type="number" id="continuous_n" value="2" min="1" max="10"></div>
+            <div class="form-group"><label>总生产数量</label><input type="number" id="total_items" value="12" min="1" max="50"></div>
+            <button class="btn btn-primary" onclick="runSimulation()" style="width:100%; margin-top:8px;">▶ 运行模拟</button>
+            <div class="stats" id="stats-bar" style="display:none;margin-top:12px;">
+                <div>生产: <span id="produced-count">0</span></div>
+                <div>消费: <span id="consumed-count">0</span></div>
+                <div>缓冲: <span id="buffer-count">0</span></div>
+            </div>
+        </div>
+        <div>
+            <div class="card" style="margin-bottom:20px;">
+                <h3>🗂️ 缓冲区状态</h3>
+                <div class="buffer-grid" id="buffer-grid"></div>
+                <div class="status-bar">
+                    <span><span class="status-dot empty"></span> 空</span>
+                    <span><span class="status-dot full"></span> 满</span>
+                </div>
+            </div>
+            <div class="card">
+                <h3>📜 事件日志</h3>
+                <div class="event-log" id="event-log">
+                    <div style="color:#546e7a;">点击"运行模拟"开始...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function initBufferGrid(size) {
+            const grid = document.getElementById('buffer-grid');
+            grid.innerHTML = Array.from({length: size}, (_, i) =>
+                `<div class="buffer-cell empty" id="cell-${i}">空</div>`
+            ).join('');
+        }
+
+        function updateBufferCell(i, item) {
+            const cell = document.getElementById(`cell-${i}`);
+            if (!cell) return;
+            if (item) {
+                cell.className = 'buffer-cell occupied';
+                cell.textContent = item;
+                setTimeout(() => { cell.className = 'buffer-cell full'; }, 500);
+            } else {
+                cell.className = 'buffer-cell empty';
+                cell.textContent = '空';
+            }
+        }
+
+        async function runSimulation() {
+            const params = {
+                buffer_size: parseInt(document.getElementById('buffer_size').value) || 5,
+                num_producers: parseInt(document.getElementById('num_producers').value) || 2,
+                num_consumers: parseInt(document.getElementById('num_consumers').value) || 2,
+                produce_speed: parseFloat(document.getElementById('produce_speed').value) || 2,
+                consume_speed: parseFloat(document.getElementById('consume_speed').value) || 1.5,
+                continuous_n: parseInt(document.getElementById('continuous_n').value) || 2,
+                total_items: parseInt(document.getElementById('total_items').value) || 12
+            };
+
+            initBufferGrid(params.buffer_size);
+            document.getElementById('event-log').innerHTML = '<div style="color:#ffa726;">⏳ 模拟运行中...</div>';
+            document.getElementById('stats-bar').style.display = 'flex';
+
+            try {
+                const resp = await fetch('/api/producer_consumer/run', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(params)
+                });
+                const data = await resp.json();
+                if (data.error) { alert(data.error); return; }
+
+                const log = document.getElementById('event-log');
+                log.innerHTML = '';
+
+                let pCount = 0, cCount = 0, bCount = 0;
+
+                for (const event of data.timeline) {
+                    const cls = event.type === 'produce' ? 'produce' : 'consume';
+                    log.innerHTML += `<div class="event ${cls}">${event.message}</div>`;
+
+                    if (event.type === 'produce') pCount++;
+                    else cCount++;
+
+                    document.getElementById('produced-count').textContent = event.produced;
+                    document.getElementById('consumed-count').textContent = event.consumed;
+                    document.getElementById('buffer-count').textContent = event.count;
+
+                    // 更新缓冲区状态
+                    for (let i = 0; i < event.buffer.length; i++) {
+                        updateBufferCell(i, event.buffer[i]);
+                    }
+                }
+
+                log.scrollTop = log.scrollHeight;
+            } catch (e) {
+                alert('请求失败: ' + e.message);
+            }
+        }
+
+        initBufferGrid(5);
+    </script>
+</body>
+</html>

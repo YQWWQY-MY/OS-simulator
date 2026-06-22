@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>处理器调度模拟 - OS算法模拟系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #0c0c1d, #1a1a3e, #0d1b2a);
+            min-height: 100vh; color: #e0e0e0;
+        }
+        .navbar {
+            background: rgba(0,0,0,0.4); padding: 14px 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex; align-items: center; gap: 16px;
+        }
+        .navbar a { color: #64b5f6; text-decoration: none; font-size: 0.95em; }
+        .navbar a:hover { color: #90caf9; }
+        .navbar .sep { color: #546e7a; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 24px 20px; }
+        .card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px; padding: 22px; margin-bottom: 20px;
+        }
+        .card h3 { color: #64b5f6; margin-bottom: 14px; font-size: 1.15em; }
+        .btn {
+            padding: 10px 22px; border: none; border-radius: 8px;
+            cursor: pointer; font-size: 0.95em; font-weight: 600;
+            transition: all 0.2s; color: #fff;
+        }
+        .btn-primary { background: #1565c0; }
+        .btn-primary:hover { background: #1976d2; }
+        .btn-success { background: #2e7d32; }
+        .btn-success:hover { background: #388e3c; }
+        .btn-danger { background: #c62828; }
+        .btn-danger:hover { background: #d32f2f; }
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+        .btn-group .btn.active { box-shadow: 0 0 0 3px rgba(255,255,255,0.4); }
+        table {
+            width: 100%; border-collapse: collapse; margin-top: 10px;
+            font-size: 0.9em;
+        }
+        table th, table td {
+            padding: 10px 12px; text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        table th { color: #90a4ae; font-weight: 600; background: rgba(0,0,0,0.2); }
+        table tr:hover { background: rgba(255,255,255,0.03); }
+        .input-row {
+            display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px;
+        }
+        .input-row input {
+            padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(0,0,0,0.3); color: #e0e0e0; width: 110px;
+            font-size: 0.9em;
+        }
+        .input-row label { font-size: 0.9em; color: #b0bec5; min-width: 60px; }
+        .gantt-container {
+            overflow-x: auto; padding: 16px 0;
+        }
+        .gantt-chart {
+            display: flex; align-items: flex-end; gap: 2px;
+            min-height: 80px; position: relative;
+        }
+        .gantt-bar {
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; min-width: 40px; padding: 8px 12px;
+            border-radius: 6px; font-weight: 600; font-size: 0.85em;
+            transition: all 0.2s;
+        }
+        .gantt-time { font-size: 0.7em; color: #b0bec5; margin-top: 4px; }
+        .summary { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 12px; }
+        .summary-item {
+            background: rgba(0,0,0,0.3); padding: 12px 18px; border-radius: 10px;
+        }
+        .summary-item .label { font-size: 0.8em; color: #78909c; }
+        .summary-item .value { font-size: 1.3em; color: #64b5f6; font-weight: 700; }
+        .colors { display: flex; gap: 12px; flex-wrap: wrap; }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="/">🏠 首页</a>
+        <span class="sep">/</span>
+        <span>模块1：处理器调度模拟</span>
+    </div>
+    <div class="container">
+        <div class="card">
+            <h3>📊 选择调度算法</h3>
+            <div class="btn-group" id="algo-btns">
+                <button class="btn btn-primary active" data-algo="fcfs">FCFS（先来先服务）</button>
+                <button class="btn btn-primary" data-algo="rr">RR（时间片轮转）</button>
+                <button class="btn btn-primary" data-algo="sjf">SJF（短进程优先-抢占）</button>
+                <button class="btn btn-primary" data-algo="hrn">HRN（最高响应比优先）</button>
+            </div>
+            <div id="rr-config" style="display:none; margin-top:10px;">
+                <label style="color:#b0bec5;">时间片大小：</label>
+                <input type="number" id="time-quantum" value="2" min="1" max="20" style="width:80px;padding:6px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.3);color:#e0e0e0;">
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>📝 进程数据</h3>
+            <table id="process-table">
+                <thead>
+                    <tr><th>进程ID</th><th>到达时间</th><th>服务时间</th><th>操作</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input type="text" value="P1" class="pid-inp" style="width:80px;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.3);color:#e0e0e0;"></td>
+                        <td><input type="number" value="0" class="arrive-inp" style="width:80px;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.3);color:#e0e0e0;"></td>
+                        <td><input type="number" value="5" class="burst-inp" style="width:80px;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.3);color:#e0e0e0;"></td>
+                        <td><button class="btn btn-danger" onclick="this.closest('tr').remove()">删除</button></td>
+                    </tr>
+                    <tr>
+                        <td><input type="text" value="P2" class="pid-inp" style="width:80px;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.3);color:#e0e0e0;"></td>
+                        <td><input type="number" value="1" class="arrive-inp" style="width:80px;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.3);color:#e0e0e0;"></td>
+                        <td><input type="number" value="3" class="burst-inp" style="width:80px;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.3);color:#e0e0e0;"></td>
+                        <td><button class="btn btn-danger" onclick="this.closest('tr').remove()">删除</button></td>
+                    </tr>
+                    <tr>
+                        <td><input type="text" value="P3" class="pid-inp" style="width:80px;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.3);color:#e0e0e0;"></td>
+                        <td><input type="number" value="2" class="arrive-inp" style="width:80px;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.3);color:#e0e0e0;"></td>
+                        <td><input type="number" value="8" class="burst-inp" style="width:80px;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.3);color:#e0e0e0;"></td>
+                        <td><button class="btn btn-danger" onclick="this.closest('tr').remove()">删除</button></td>
+                    </tr>
+                    <tr>
+                        <td><input type="text" value="P4" class="pid-inp" style="width:80px;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.3);color:#e0e0e0;"></td>
+                        <td><input type="number" value="3" class="arrive-inp" style="width:80px;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.3);color:#e0e0e0;"></td>
+                        <td><input type="number" value="6" class="burst-inp" style="width:80px;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.3);color:#e0e0e0;"></td>
+                        <td><button class="btn btn-danger" onclick="this.closest('tr').remove()">删除</button></td>
+                    </tr>
+                </tbody>
+            </table>
+            <div style="margin-top:12px; display:flex; gap:10px;">
+                <button class="btn btn-success" onclick="addProcess()">+ 添加进程</button>
+                <button class="btn btn-primary" onclick="runSimulation()">▶ 运行模拟</button>
+            </div>
+        </div>
+
+        <div class="card" id="result-card" style="display:none;">
+            <h3>📈 模拟结果</h3>
+            <div id="gantt-section"></div>
+            <div class="summary" id="summary-section"></div>
+            <table id="result-table" style="margin-top:16px;">
+                <thead>
+                    <tr><th>进程</th><th>到达时间</th><th>服务时间</th><th>开始时间</th><th>完成时间</th><th>周转时间</th><th>带权周转时间</th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const colors = ['#e53935','#1e88e5','#43a047','#fb8c00','#8e24aa','#00acc1','#f4511e','#3949ab','#7cb342','#c0ca33'];
+        let selectedAlgo = 'fcfs';
+
+        document.querySelectorAll('#algo-btns .btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('#algo-btns .btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedAlgo = btn.dataset.algo;
+                document.getElementById('rr-config').style.display = selectedAlgo === 'rr' ? 'block' : 'none';
+            });
+        });
+
+        function addProcess() {
+            const tbody = document.querySelector('#process-table tbody');
+            const tr = document.createElement('tr');
+            const n = tbody.children.length + 1;
+            tr.innerHTML = `
+                <td><input type="text" value="P${n}" class="pid-inp" style="width:80px;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.3);color:#e0e0e0;"></td>
+                <td><input type="number" value="0" class="arrive-inp" style="width:80px;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.3);color:#e0e0e0;"></td>
+                <td><input type="number" value="5" class="burst-inp" style="width:80px;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.3);color:#e0e0e0;"></td>
+                <td><button class="btn btn-danger" onclick="this.closest('tr').remove()">删除</button></td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        function getProcesses() {
+            const rows = document.querySelectorAll('#process-table tbody tr');
+            const processes = [];
+            rows.forEach(row => {
+                const pid = row.querySelector('.pid-inp').value.trim();
+                const arrive = parseInt(row.querySelector('.arrive-inp').value) || 0;
+                const burst = parseInt(row.querySelector('.burst-inp').value) || 1;
+                if (pid) processes.push({ pid, arrive_time: arrive, burst_time: burst });
+            });
+            return processes;
+        }
+
+        let procColorMap = {};
+
+        async function runSimulation() {
+            const processes = getProcesses();
+            if (processes.length === 0) { alert('请至少添加一个进程'); return; }
+
+            const timeQuantum = parseInt(document.getElementById('time-quantum').value) || 2;
+
+            try {
+                const resp = await fetch('/api/scheduler/run', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ algorithm: selectedAlgo, processes, time_quantum: timeQuantum })
+                });
+                const data = await resp.json();
+                if (data.error) { alert(data.error); return; }
+
+                procColorMap = {};
+                data.results.forEach((r, i) => { procColorMap[r.pid] = colors[i % colors.length]; });
+
+                // 甘特图
+                const ganttDiv = document.getElementById('gantt-section');
+                ganttDiv.innerHTML = '<h4 style="color:#90a4ae;margin-bottom:8px;">甘特图</h4><div class="gantt-chart">' +
+                    data.gantt.map(g => {
+                        const w = Math.max((g.end - g.start) * 50, 40);
+                        return `<div class="gantt-bar" style="background:${procColorMap[g.pid]};width:${w}px;">
+                            <span>${g.pid}</span><span class="gantt-time">${g.start}→${g.end}</span></div>`;
+                    }).join('') + '</div>';
+
+                // 汇总
+                document.getElementById('summary-section').innerHTML = `
+                    <div class="summary-item"><div class="label">平均周转时间</div><div class="value">${data.avg_turnaround}</div></div>
+                    <div class="summary-item"><div class="label">平均带权周转时间</div><div class="value">${data.avg_weighted}</div></div>`;
+
+                // 结果表
+                const tbody = document.querySelector('#result-table tbody');
+                tbody.innerHTML = data.results.map(r => `
+                    <tr>
+                        <td style="font-weight:600;color:${procColorMap[r.pid]}">${r.pid}</td>
+                        <td>${r.arrive_time}</td><td>${r.burst_time}</td><td>${r.start_time}</td>
+                        <td>${r.finish_time}</td><td>${r.turnaround_time}</td><td>${r.weighted_turnaround_time}</td>
+                    </tr>`).join('');
+
+                document.getElementById('result-card').style.display = 'block';
+            } catch (e) {
+                alert('请求失败: ' + e.message);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>银行家算法演示 - OS算法模拟系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #0c0c1d, #1a1a3e, #0d1b2a);
+            min-height: 100vh; color: #e0e0e0;
+        }
+        .navbar {
+            background: rgba(0,0,0,0.4); padding: 14px 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex; align-items: center; gap: 16px;
+        }
+        .navbar a { color: #64b5f6; text-decoration: none; font-size: 0.95em; }
+        .navbar a:hover { color: #90caf9; }
+        .navbar .sep { color: #546e7a; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 24px 20px; }
+        .card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px; padding: 22px; margin-bottom: 20px;
+        }
+        .card h3 { color: #64b5f6; margin-bottom: 14px; font-size: 1.1em; }
+        .btn {
+            padding: 10px 22px; border: none; border-radius: 8px;
+            cursor: pointer; font-size: 0.95em; font-weight: 600;
+            transition: all 0.2s; color: #fff;
+        }
+        .btn-primary { background: #1565c0; }
+        .btn-primary:hover { background: #1976d2; }
+        .btn-success { background: #2e7d32; }
+        .btn-success:hover { background: #388e3c; }
+        .btn-danger { background: #c62828; }
+        .btn-danger:hover { background: #d32f2f; }
+        .btn-outline {
+            background: transparent; border: 1px solid rgba(255,255,255,0.3);
+            color: #b0bec5;
+        }
+        .btn-outline:hover { border-color: #64b5f6; color: #64b5f6; }
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+        .btn-group .btn.active { box-shadow: 0 0 0 3px rgba(255,255,255,0.4); }
+        table {
+            width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.88em;
+        }
+        table th, table td {
+            padding: 10px 12px; text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        table th { color: #90a4ae; font-weight: 600; background: rgba(0,0,0,0.2); }
+        table tr:hover { background: rgba(255,255,255,0.03); }
+        .form-group { margin-bottom: 10px; }
+        .form-group label { display: block; color: #b0bec5; font-size: 0.85em; margin-bottom: 4px; }
+        .form-group input, .form-group select {
+            width: 100%; padding: 8px 12px; border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(0,0,0,0.3); color: #e0e0e0; font-size: 0.9em;
+        }
+        .row { display: flex; gap: 12px; flex-wrap: wrap; }
+        .col { flex: 1; min-width: 120px; }
+        .badge {
+            display: inline-block; padding: 4px 12px; border-radius: 20px;
+            font-size: 0.8em; font-weight: 600; margin: 2px 4px;
+        }
+        .badge-safe { background: #1b5e20; color: #a5d6a7; }
+        .badge-unsafe { background: #b71c1c; color: #ef9a9a; }
+        .badge-success { background: #1b5e20; color: #a5d6a7; }
+        .request-area { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.08); }
+        .highlight { color: #ffa726; font-weight: 700; }
+        .matrix-input { overflow-x: auto; margin: 8px 0; }
+        .matrix-input table { margin-top: 0; }
+        .matrix-input td { padding: 3px 5px; border: none; }
+        .matrix-input input {
+            width: 50px; padding: 5px 6px; border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(0,0,0,0.4); color: #e0e0e0;
+            text-align: center; font-size: 0.85em;
+        }
+        .matrix-input input:focus { border-color: #64b5f6; outline: none; }
+        .section-label { color: #78909c; font-size: 0.8em; text-transform: uppercase; margin: 8px 0 4px; letter-spacing: 1px; }
+        .mode-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="/">🏠 首页</a>
+        <span class="sep">/</span>
+        <span>模块3：银行家算法演示</span>
+    </div>
+    <div class="container">
+        <div class="card">
+            <h3>🏦 银行家算法 - 判断系统安全状态</h3>
+            <p style="color:#78909c;font-size:0.88em;margin-bottom:16px;">支持动态输入资源数和进程数，检查系统安全性，模拟资源请求</p>
+
+            <!-- 模式切换 -->
+            <div class="mode-tabs">
+                <button class="btn btn-primary active" id="tab-example" onclick="switchMode('example')">📥 示例数据</button>
+                <button class="btn btn-outline" id="tab-custom" onclick="switchMode('custom')">✏️ 自定义输入</button>
+            </div>
+
+            <!-- 示例模式 -->
+            <div id="mode-example" style="margin-bottom:12px;">
+                <button class="btn btn-primary" onclick="loadExample()">📥 加载经典示例（3资源 × 5进程）</button>
+            </div>
+
+            <!-- 自定义输入模式 -->
+            <div id="mode-custom" style="display:none;">
+                <div class="row">
+                    <div class="col"><div class="form-group"><label>资源种类数</label><input type="number" id="res-count" value="3" min="1" max="8" onchange="buildCustomGrid()"></div></div>
+                    <div class="col"><div class="form-group"><label>进程数量</label><input type="number" id="proc-count" value="5" min="1" max="10" onchange="buildCustomGrid()"></div></div>
+                </div>
+                <div class="section-label">可用资源 (Available)</div>
+                <div id="custom-available" style="display:flex;gap:8px;margin-bottom:8px;"></div>
+                <div class="section-label">最大需求矩阵 (Max)</div>
+                <div id="custom-max" class="matrix-input"></div>
+                <div class="section-label">已分配矩阵 (Allocation)</div>
+                <div id="custom-alloc" class="matrix-input"></div>
+                <button class="btn btn-primary" onclick="submitCustom()" style="margin-top:10px;">✅ 构建并检查安全状态</button>
+            </div>
+
+            <div id="status-msg" style="margin-top:10px;"></div>
+            <div id="tables-container"></div>
+            <div class="request-area" id="request-area" style="display:none;">
+                <h4 style="color:#b0bec5;margin-bottom:8px;">🔍 进程请求资源检查</h4>
+                <div class="row">
+                    <div class="col" style="min-width:100px;"><div class="form-group"><label>请求进程ID</label><input type="text" id="req-process" value="P0"></div></div>
+                    <div id="req-fields" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;padding-bottom:10px;"></div>
+                    <div class="col" style="min-width:120px;display:flex;align-items:flex-end;padding-bottom:10px;">
+                        <button class="btn btn-success" onclick="checkRequest()">检查请求</button>
+                    </div>
+                </div>
+                <div id="request-result" style="margin-top:8px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentResult = null;
+        let currentResCount = 3;
+        let currentMode = 'example';
+        const RES_NAMES = 'ABCDEFGH'.split('');
+
+        function switchMode(mode) {
+            currentMode = mode;
+            document.getElementById('tab-example').className = mode === 'example' ? 'btn btn-primary active' : 'btn btn-outline';
+            document.getElementById('tab-custom').className = mode === 'custom' ? 'btn btn-primary active' : 'btn btn-outline';
+            document.getElementById('mode-example').style.display = mode === 'example' ? 'block' : 'none';
+            document.getElementById('mode-custom').style.display = mode === 'custom' ? 'block' : 'none';
+            if (mode === 'custom') {
+                buildCustomGrid();
+            }
+        }
+
+        function buildCustomGrid() {
+            const rc = parseInt(document.getElementById('res-count').value) || 3;
+            const pc = parseInt(document.getElementById('proc-count').value) || 5;
+            currentResCount = rc;
+
+            // Available
+            let availHtml = '';
+            for (let j = 0; j < rc; j++) {
+                availHtml += `<div class="form-group" style="flex:1;min-width:50px;"><label>${RES_NAMES[j]}</label><input type="number" id="avail-${j}" value="${j === 0 ? 3 : j === 1 ? 3 : 2}" min="0" style="width:100%;"></div>`;
+            }
+            document.getElementById('custom-available').innerHTML = availHtml;
+
+            // Max matrix
+            let maxHtml = '<table><thead><tr><th>进程</th>';
+            for (let j = 0; j < rc; j++) maxHtml += `<th>${RES_NAMES[j]}</th>`;
+            maxHtml += '</tr></thead><tbody>';
+            for (let i = 0; i < pc; i++) {
+                maxHtml += `<tr><td style="font-weight:600;">P${i}</td>`;
+                for (let j = 0; j < rc; j++) {
+                    const defaults = i === 0 ? [7,5,3] : i === 1 ? [3,2,2] : i === 2 ? [9,0,2] : i === 3 ? [2,2,2] : [4,3,3];
+                    maxHtml += `<td><input type="number" id="max-${i}-${j}" value="${defaults[j] || 0}" min="0"></td>`;
+                }
+                maxHtml += '</tr>';
+            }
+            maxHtml += '</tbody></table>';
+            document.getElementById('custom-max').innerHTML = maxHtml;
+
+            // Allocation matrix
+            let allocHtml = '<table><thead><tr><th>进程</th>';
+            for (let j = 0; j < rc; j++) allocHtml += `<th>${RES_NAMES[j]}</th>`;
+            allocHtml += '</tr></thead><tbody>';
+            for (let i = 0; i < pc; i++) {
+                allocHtml += `<tr><td style="font-weight:600;">P${i}</td>`;
+                for (let j = 0; j < rc; j++) {
+                    const defaults = i === 0 ? [0,1,0] : i === 1 ? [2,0,0] : i === 2 ? [3,0,2] : i === 3 ? [2,1,1] : [0,0,2];
+                    allocHtml += `<td><input type="number" id="alloc-${i}-${j}" value="${defaults[j] || 0}" min="0"></td>`;
+                }
+                allocHtml += '</tr>';
+            }
+            allocHtml += '</tbody></table>';
+            document.getElementById('custom-alloc').innerHTML = allocHtml;
+        }
+
+        function submitCustom() {
+            const rc = parseInt(document.getElementById('res-count').value) || 3;
+            const pc = parseInt(document.getElementById('proc-count').value) || 5;
+            currentResCount = rc;
+
+            const available = [];
+            for (let j = 0; j < rc; j++) {
+                available.push(parseInt(document.getElementById(`avail-${j}`).value) || 0);
+            }
+
+            const max_demand = [];
+            for (let i = 0; i < pc; i++) {
+                const row = [];
+                for (let j = 0; j < rc; j++) {
+                    row.push(parseInt(document.getElementById(`max-${i}-${j}`).value) || 0);
+                }
+                max_demand.push(row);
+            }
+
+            const allocation = [];
+            for (let i = 0; i < pc; i++) {
+                const row = [];
+                for (let j = 0; j < rc; j++) {
+                    row.push(parseInt(document.getElementById(`alloc-${i}-${j}`).value) || 0);
+                }
+                allocation.push(row);
+            }
+
+            // 验证 Need >= 0
+            let valid = true;
+            for (let i = 0; i < pc; i++) {
+                for (let j = 0; j < rc; j++) {
+                    if (allocation[i][j] > max_demand[i][j]) {
+                        alert(`P${i} 的已分配资源超过最大需求！`);
+                        valid = false;
+                    }
+                }
+            }
+            if (!valid) return;
+
+            document.getElementById('status-msg').innerHTML = '';
+            document.getElementById('request-result').innerHTML = '';
+            loadFromData({ available, max_demand, allocation });
+        }
+
+        function loadFromData(data) {
+            fetch('/api/banker/check', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    available: data.available,
+                    max_demand: data.max_demand,
+                    allocation: data.allocation
+                })
+            }).then(resp => resp.json()).then(result => {
+                const d = {
+                    available: data.available,
+                    max_demand: data.max_demand,
+                    allocation: data.allocation,
+                    need: result.need_matrix,
+                    is_safe: result.is_safe,
+                    safe_sequence: result.safety_sequence,
+                    safety_sequence: result.safety_sequence
+                };
+                renderTables(d);
+                currentResult = d;
+                buildRequestFields();
+                document.getElementById('request-area').style.display = 'block';
+            }).catch(e => { alert('请求失败: ' + e.message); });
+        }
+
+        async function loadExample() {
+            document.getElementById('status-msg').innerHTML = '';
+            document.getElementById('request-result').innerHTML = '';
+            try {
+                const resp = await fetch('/api/banker/example');
+                const data = await resp.json();
+                currentResCount = data.available.length;
+                renderTables(data);
+                currentResult = data;
+                buildRequestFields();
+                document.getElementById('request-area').style.display = 'block';
+            } catch (e) { alert('加载失败: ' + e.message); }
+        }
+
+        function buildRequestFields() {
+            const rc = currentResCount;
+            let html = '';
+            for (let j = 0; j < rc; j++) {
+                html += `<div class="col" style="min-width:70px;"><div class="form-group"><label>请求${RES_NAMES[j]}</label><input type="number" id="req-${j}" value="1" min="0"></div></div>`;
+            }
+            document.getElementById('req-fields').innerHTML = html;
+        }
+
+        function renderTables(data) {
+            const rc = data.available.length;
+            const container = document.getElementById('tables-container');
+            let html = '';
+
+            // 表头
+            let header = '<tr><th>进程</th>';
+            for (let j = 0; j < rc; j++) header += `<th>${RES_NAMES[j]}</th>`;
+            header += '</tr>';
+
+            // 最大需求矩阵
+            html += '<h4 style="color:#90a4ae;margin:12px 0 6px;">最大需求矩阵 (Max)</h4>';
+            html += '<table><thead>' + header + '</thead><tbody>';
+            data.max_demand.forEach((row, i) => {
+                html += `<tr><td style="font-weight:600;">P${i}</td>`;
+                for (let j = 0; j < rc; j++) html += `<td>${row[j] !== undefined ? row[j] : 0}</td>`;
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+
+            // 已分配
+            html += '<h4 style="color:#90a4ae;margin:12px 0 6px;">已分配矩阵 (Allocation)</h4>';
+            html += '<table><thead>' + header + '</thead><tbody>';
+            data.allocation.forEach((row, i) => {
+                html += `<tr><td style="font-weight:600;">P${i}</td>`;
+                for (let j = 0; j < rc; j++) html += `<td>${row[j] !== undefined ? row[j] : 0}</td>`;
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+
+            // 需求矩阵
+            html += '<h4 style="color:#90a4ae;margin:12px 0 6px;">需求矩阵 (Need)</h4>';
+            html += '<table><thead>' + header + '</thead><tbody>';
+            data.need.forEach((row, i) => {
+                html += `<tr><td style="font-weight:600;">P${i}</td>`;
+                for (let j = 0; j < rc; j++) html += `<td>${row[j] !== undefined ? row[j] : 0}</td>`;
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+
+            // 可用资源
+            html += '<h4 style="color:#90a4ae;margin:12px 0 6px;">可用资源 (Available): &nbsp;';
+            html += '<span class="highlight">';
+            const availParts = [];
+            for (let j = 0; j < rc; j++) {
+                availParts.push(`${RES_NAMES[j]}=${data.available[j]}`);
+            }
+            html += availParts.join(', ');
+            html += '</span></h4>';
+
+            // 安全状态
+            html += '<div style="margin-top:10px;">';
+            if (data.is_safe) {
+                html += '<span class="badge badge-safe">✅ 安全状态</span> ';
+                html += '<span style="color:#b0bec5;">安全序列: </span>';
+                html += data.safe_sequence.map(s => `<span class="badge badge-success">${s}</span>`).join(' → ');
+            } else {
+                html += '<span class="badge badge-unsafe">❌ 不安全状态</span>';
+            }
+            html += '</div>';
+
+            container.innerHTML = html;
+        }
+
+        function parseProcessIndex(pidStr) {
+            const m = pidStr.match(/P?(\d+)/);
+            return m ? parseInt(m[1]) : -1;
+        }
+
+        async function checkRequest() {
+            const pidStr = document.getElementById('req-process').value.trim();
+            const pi = parseProcessIndex(pidStr);
+            if (pi < 0 || !currentResult || pi >= currentResult.max_demand.length) {
+                document.getElementById('request-result').innerHTML =
+                    '<span class="badge badge-unsafe">无效的进程ID</span>';
+                return;
+            }
+            const rc = currentResCount;
+            const req = [];
+            for (let j = 0; j < rc; j++) {
+                req.push(parseInt(document.getElementById(`req-${j}`).value) || 0);
+            }
+
+            try {
+                const resp = await fetch('/api/banker/check_request', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        process_id: pi,
+                        request: req,
+                        state: currentResult
+                    })
+                });
+                const data = await resp.json();
+                const div = document.getElementById('request-result');
+                if (data.granted) {
+                    div.innerHTML = `<div style="background:rgba(43,128,45,0.15);padding:10px;border-radius:8px;">
+                        <span class="badge badge-safe">✅ 可以分配</span>
+                        <span style="color:#b0bec5;margin-left:8px;">安全序列: </span>
+                        ${data.safe_sequence.map(s => `<span class="badge badge-success">${s}</span>`).join(' → ')}
+                    </div>`;
+                } else {
+                    div.innerHTML = `<div style="background:rgba(198,40,40,0.15);padding:10px;border-radius:8px;">
+                        <span class="badge badge-unsafe">❌ 不可分配 - ${data.reason}</span>
+                    </div>`;
+                }
+            } catch (e) { alert('检查失败: ' + e.message); }
+        }
+
+        // 默认加载示例
+        loadExample();
+        buildCustomGrid();
+    </script>
+</body>
+</html>

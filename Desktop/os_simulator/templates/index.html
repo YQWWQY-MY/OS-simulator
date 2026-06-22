@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>操作系统核心算法模拟系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+            background: linear-gradient(135deg, #0c0c1d 0%, #1a1a3e 50%, #0d1b2a 100%);
+            min-height: 100vh;
+            color: #e0e0e0;
+        }
+        .header {
+            text-align: center;
+            padding: 40px 20px 20px;
+            background: rgba(0,0,0,0.3);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .header h1 {
+            font-size: 2.2em;
+            background: linear-gradient(135deg, #64b5f6, #ce93d8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+        .header p { color: #90a4ae; font-size: 1.05em; }
+        .container { max-width: 1300px; margin: 0 auto; padding: 30px 20px; }
+        .modules {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 24px;
+        }
+        .module-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 28px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+        .module-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(100, 180, 255, 0.4);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+            background: rgba(255,255,255,0.06);
+        }
+        .module-icon {
+            font-size: 2.8em;
+            margin-bottom: 14px;
+            display: block;
+        }
+        .module-card h2 { font-size: 1.35em; margin-bottom: 8px; color: #64b5f6; }
+        .module-card .desc { color: #9e9e9e; font-size: 0.92em; line-height: 1.6; }
+        .module-card .features {
+            margin-top: 12px;
+            font-size: 0.82em;
+            color: #78909c;
+            line-height: 1.8;
+        }
+        .footer {
+            text-align: center;
+            padding: 30px;
+            color: #546e7a;
+            font-size: 0.85em;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🖥️ 操作系统核心算法模拟系统</h1>
+        <p>进程调度 · 同步互斥 · 死锁避免 · 页面置换 · 磁盘调度</p>
+    </div>
+    <div class="container">
+        <div class="modules">
+            <a href="/scheduler" class="module-card">
+                <span class="module-icon">📊</span>
+                <h2>模块1：处理器调度模拟</h2>
+                <p class="desc">模拟 FCFS、RR、SJF（抢占）、HRN 四种调度算法</p>
+                <p class="features">✓ 甘特图可视化 ✓ 计算周转时间/带权周转时间 ✓ 动态添加进程</p>
+            </a>
+            <a href="/producer_consumer" class="module-card">
+                <span class="module-icon">🔄</span>
+                <h2>模块2：生产者-消费者同步模拟</h2>
+                <p class="desc">多生产者/多消费者，信号量机制实现同步与互斥</p>
+                <p class="features">✓ 缓冲区可视化 ✓ 连续取n个产品 ✓ 可调速</p>
+            </a>
+            <a href="/banker" class="module-card">
+                <span class="module-icon">🏦</span>
+                <h2>模块3：银行家算法演示</h2>
+                <p class="desc">判断系统安全状态，动态请求资源模拟</p>
+                <p class="features">✓ 安全序列展示 ✓ 资源分配检测 ✓ 表格可视化</p>
+            </a>
+            <a href="/page_replacement" class="module-card">
+                <span class="module-icon">📄</span>
+                <h2>模块4：页面置换算法模拟</h2>
+                <p class="desc">模拟 OPT、LRU、FIFO 三种页面置换算法</p>
+                <p class="features">✓ 内存状态矩阵 ✓ 缺页率计算 ✓ 高亮缺页事件</p>
+            </a>
+            <a href="/disk_scheduling" class="module-card">
+                <span class="module-icon">💿</span>
+                <h2>模块5：磁盘移臂调度模拟</h2>
+                <p class="desc">模拟 SSTF 和 SCAN（电梯算法）磁盘调度</p>
+                <p class="features">✓ 磁头移动轨迹图 ✓ 寻道总长度 ✓ 响应顺序</p>
+            </a>
+        </div>
+    </div>
+    <div class="footer">操作系统课程设计 B方案 · 核心功能算法模拟</div>
+</body>
+</html>
